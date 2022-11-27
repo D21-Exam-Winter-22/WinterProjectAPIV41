@@ -12,11 +12,10 @@ namespace WinterProjectAPIV41.Controllers
     public class UserGroupController : ControllerBase
     {
         private readonly PaymentApidb11Context context;
-        private Dictionary<int, string> TokenDictionary;
+        private static Dictionary<int, string> TokenDictionary = new Dictionary<int, string>();
         public UserGroupController(PaymentApidb11Context context)
         {
             this.context = context;
-            TokenDictionary = new Dictionary<int, string>();
         }
 
         [HttpGet("IsOnline")]
@@ -149,10 +148,17 @@ namespace WinterProjectAPIV41.Controllers
             return Ok(GroupMembersList);
         }
 
+        [HttpGet("GetGroupDetailsByGroupID/{GroupID}")]
+        public async Task<ActionResult<ShareGroup>> GetGroupDetails(int GroupID)
+        {
+            ShareGroup SelectedGroup = await context.ShareGroups.FindAsync(GroupID);
+            return Ok(SelectedGroup);
+        }
+
         [HttpGet("GetAllUserGroups")]
         public async Task<ActionResult<List<UserGroup>>> GetAllUserGroups()
         {
-            List<UserGroup> GroupMembersList = await context.UserGroups
+            List<UserGroup> GroupMembersList = await context.UserGroups 
                 .Include(UserGroup => UserGroup.User)
                 .Include(Group => Group.Group).ToListAsync();
 
@@ -763,7 +769,7 @@ namespace WinterProjectAPIV41.Controllers
         
         
         [HttpPut("EditInPayment")]
-        public async void EditAnInPayment(InPaymentDto request)
+        public async Task<ActionResult<string>> EditAnInPayment(InPaymentDto request)
         {
             //Get the particular inpayment entry
             InPayment RecordToUpdate = context.InPayments.Find(request.TransactionID);
@@ -774,6 +780,7 @@ namespace WinterProjectAPIV41.Controllers
                 RecordToUpdate.Amount = request.Amount;
             }
             await context.SaveChangesAsync();
+            return Ok("Payment Edited");
         }
         
         
@@ -979,11 +986,71 @@ namespace WinterProjectAPIV41.Controllers
                 return NotFound("Invalid user details");
             }
             ShareUser user = UsersList.First();
+            
+            //Check if the key is already present in the dictionary
+            if (TokenDictionary.ContainsKey(user.UserId))
+            {
+                return Ok("Already logged in");
+            }
+            
             TokenDictionary.Add(user.UserId, EncodedValue);
-            string token = TokenDictionary[user.UserId];
-            return Ok(token);
+            
+            return Ok(EncodedValue);
+        }
+        
+        [HttpGet("GetTokenOnUserID/{UserID}")]
+        public async Task<ActionResult<string>> GetTokenOnUserID(int UserID)
+        {
+            if (TokenDictionary.ContainsKey(UserID))
+            {
+                return Ok(TokenDictionary[UserID]);
+            }
+            else
+            {
+                return NotFound("Not Present in the Dictionary");
+            }
+        }
+        
+
+        [HttpPut("ChangeGroupVisibility/{GroupID}")]
+        public async Task<ActionResult<string>> ChangeGroupVisibility(int GroupID)
+        {
+            ShareGroup? TheGroup = await context.ShareGroups.FindAsync(GroupID);
+            if (TheGroup == null)
+            {
+                return NotFound("Invalid GroupID");
+            }
+            TheGroup.IsPublic = !TheGroup.IsPublic;
+            await context.SaveChangesAsync();
+            return Ok("Changed Visibility");
         }
 
+        
+
+        [HttpGet("SearchShareUsers/{SearchString}")]
+        public async Task<ActionResult<List<ShareUser>>> SearchForUsers(string SearchString)
+        {
+            List<ShareUser> SearchedUsers = await context.ShareUsers.Where(user => user.UserName.Contains(SearchString) || user.FirstName.Contains(SearchString) || user.LastName.Contains(SearchString)).ToListAsync();
+            return Ok(SearchedUsers);
+        }
+
+        [HttpGet("SearchShareGroups/{SearchString}")]
+        public async Task<ActionResult<List<ShareGroup>>> SearchForGroups(string SearchString)
+        {
+            List<ShareGroup> SearchedGroups = await context.ShareGroups.Where(group => group.Name.Contains(SearchString) || group.Description.Contains(SearchString)).ToListAsync();
+            return Ok(SearchedGroups);
+        }
+        
+        [HttpGet("SearchExpenses/{SearchString}")]
+        public async Task<ActionResult<List<Expense>>> SearchForExpenses(string SearchString)
+        {
+            List<Expense> SearchedExpenses = await context.Expenses.Where(expense => expense.Name.Contains(SearchString) || expense.Description.Contains(SearchString)).ToListAsync();
+            return Ok(SearchedExpenses);
+        }
+
+        
+        
+        
         
         
         //TODO  recover lost user account

@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\buildMultiTargeting\WinterProjectAPIV41.props" />
+</Project>
