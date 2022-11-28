@@ -1,6 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WinterProjectAPIV41.DataTransferObjects;
 using WinterProjectAPIV41.Models;
@@ -691,6 +689,7 @@ namespace WinterProjectAPIV41.Controllers
         [HttpPut("UpdateGroupDetails")]
         public async Task<ActionResult<List<UserGroup>>> UpdateGroupDetails(UpdateGroupDetailsDto request)
         {
+            //Check if the record exists
             var query = from sharegroup in context.ShareGroups
                 where sharegroup.GroupId == request.GroupID
                     select new
@@ -704,13 +703,14 @@ namespace WinterProjectAPIV41.Controllers
                 rowCounter++;
             }
             
-            //Check if the record exists
+            
             
             //Find the record
             ShareGroup RecordToChange = context.ShareGroups.Find(request.GroupID);
             
             RecordToChange.Name = request.NewGroupName;
             RecordToChange.Description = request.NewGroupDescription;
+            RecordToChange.IsPublic = request.IsPublic;
 
             //Save the changes
             await context.SaveChangesAsync();
@@ -1048,10 +1048,14 @@ namespace WinterProjectAPIV41.Controllers
             return Ok(SearchedExpenses);
         }
 
-        
-        
-        
-        
+
+        [HttpGet("TestGetPDFFile")]
+        public async Task<ActionResult<Byte[]>> TestGetPDFFile()
+        {
+            string FilePath = "C:\\Users\\allan\\OneDrive\\Desktop\\Allan's Resume.pdf";
+            byte[] PDFBytes = System.IO.File.ReadAllBytes(FilePath);
+            return PDFBytes;
+        }
         
         //TODO  recover lost user account
         
